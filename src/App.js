@@ -13,7 +13,112 @@ import CircularProgress from 'material-ui/CircularProgress';
 import Web3 from 'web3'
 import {GridList, GridTile} from 'material-ui/GridList';
 import * as WebRequest from 'web-request';
+import * as abiDecoder from 'abi-decoder'; // NodeJS
+import * as txDecoder from 'ethereum-tx-decoder';
 
+const BigNumber = window.web3.BigNumber;
+
+var o = function(e, t) {
+  return null == e ? 0 : new BigNumber(e.toString()).shiftedBy(t).toString()
+};
+
+function prepareOrderParams2(whichExchange, ordersOpen) {
+  console.log("HEY");
+  var n = "0x0000000000000000000000000000000000000000",
+      _exchanges = [],
+      orderAddresses = [],
+      orderValues = [],
+      exchangeFees = [],
+      vECDSA = [],
+      rECDSA = [],
+      sECDSA = [];
+
+  console.log("ordersOpen", ordersOpen);
+
+  for (var idx = 0; idx < ordersOpen.length; idx++) {
+      var currentOrder = ordersOpen[idx];
+      console.log("currentOrder", currentOrder);
+
+      _exchanges[idx] = currentOrder.exchange;
+      //exchangeFees[idx] = new BigNumber(o(currentOrder.feePercentage, 18));
+      exchangeFees[idx] = new BigNumber(1);
+      console.log("YOOOO");
+
+      if( currentOrder.exchange === 0) { // Etherdelta
+          orderAddresses[idx] = [
+                  currentOrder.user,
+                  currentOrder.tokenGive,
+                  currentOrder.tokenGet,
+                  n,
+                  n
+              ];
+
+          orderValues[idx] = [
+                  new BigNumber(currentOrder.amountGive),
+                  new BigNumber(currentOrder.amountGet),
+                  currentOrder.expires,
+                  currentOrder.nonce,
+                  0,
+                  0
+              ];
+
+          vECDSA[idx] = currentOrder.v;
+          rECDSA[idx] = currentOrder.r;
+          sECDSA[idx] = currentOrder.s
+      }
+
+      if( currentOrder.exchange === 1) { // 0x
+        console.log("Ox baby");
+          orderAddresses[idx] = [
+                  currentOrder.maker,
+                  currentOrder.taker,
+                  currentOrder.makerTokenAddress,
+                  currentOrder.takerTokenAddress,
+                  currentOrder.feeRecipient
+              ];
+          orderValues[idx] = [
+                  new BigNumber(currentOrder.makerTokenAmount),
+                  new BigNumber(currentOrder.takerTokenAmount),
+                  new BigNumber(currentOrder.makerFee),
+                  new BigNumber(currentOrder.takerFee),
+                  currentOrder.expirationUnixTimestampSec,
+                  currentOrder.salt
+              ];
+
+          vECDSA[idx] = currentOrder.ecSignature.v;
+          rECDSA[idx] = currentOrder.ecSignature.r;
+          sECDSA[idx] = currentOrder.ecSignature.s;
+      }
+  }
+
+  return {
+      exchanges: _exchanges,
+      orderAddresses: orderAddresses,
+      orderValues: orderValues,
+      exchangeFees: exchangeFees,
+      v: vECDSA,
+      r: rECDSA,
+      s: sECDSA
+  }
+}
+/*
+var ABI_easy = [{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"withdrawFees","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"feeAccount","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"feeAccount_","type":"address"}],"name":"changeFeeAccount","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"serviceFee","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"admin_","type":"address"}],"name":"changeAdmin","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"ZRX_TOKEN_ADDR","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"token","type":"address"},{"name":"tokensTotal","type":"uint256"},{"name":"ethersTotal","type":"uint256"},{"name":"exchanges","type":"uint8[]"},{"name":"orderAddresses","type":"address[5][]"},{"name":"orderValues","type":"uint256[6][]"},{"name":"exchangeFees","type":"uint256[]"},{"name":"v","type":"uint8[]"},{"name":"r","type":"bytes32[]"},{"name":"s","type":"bytes32[]"}],"name":"createSellOrder","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"collectedFee","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"withdrawZRX","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"token","type":"address"},{"name":"tokensTotal","type":"uint256"},{"name":"exchanges","type":"uint8[]"},{"name":"orderAddresses","type":"address[5][]"},{"name":"orderValues","type":"uint256[6][]"},{"name":"exchangeFees","type":"uint256[]"},{"name":"v","type":"uint8[]"},{"name":"r","type":"bytes32[]"},{"name":"s","type":"bytes32[]"}],"name":"createBuyOrder","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[],"name":"admin","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"serviceFee_","type":"uint256"}],"name":"changeFeePercentage","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"VERSION","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[{"name":"admin_","type":"address"},{"name":"feeAccount_","type":"address"},{"name":"serviceFee_","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"},{"anonymous":false,"inputs":[{"indexed":false,"name":"account","type":"address"},{"indexed":false,"name":"token","type":"address"},{"indexed":false,"name":"tokens","type":"uint256"},{"indexed":false,"name":"ethers","type":"uint256"},{"indexed":false,"name":"tokensSold","type":"uint256"},{"indexed":false,"name":"ethersObtained","type":"uint256"},{"indexed":false,"name":"tokensRefunded","type":"uint256"}],"name":"FillSellOrder","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"name":"account","type":"address"},{"indexed":false,"name":"token","type":"address"},{"indexed":false,"name":"tokens","type":"uint256"},{"indexed":false,"name":"ethers","type":"uint256"},{"indexed":false,"name":"tokensObtained","type":"uint256"},{"indexed":false,"name":"ethersSpent","type":"uint256"},{"indexed":false,"name":"ethersRefunded","type":"uint256"}],"name":"FillBuyOrder","type":"event"}];
+
+abiDecoder.addABI(ABI_easy);
+const testData = "0xf9067381878477359400830a1590949ae4ed3bf7a3a529afbc126b4541c0d636d455f6880999ac9e5aaaa04db90604f7c3805200000000000000000000000012b306fa98f4cbb8d4457fdff3a0a0a56f07ccdf000000000000000000000000000000000000000000000043c33c1937564819f00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000002e0000000000000000000000000000000000000000000000000000000000000048000000000000000000000000000000000000000000000000000000000000004e0000000000000000000000000000000000000000000000000000000000000054000000000000000000000000000000000000000000000000000000000000005a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000d1294a465ca1f1660e5afa17520f1a55f3ed7d0200000000000000000000000012b306fa98f4cbb8d4457fdff3a0a0a56f07ccdf000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d99750f1307326dcd3bf371fde3267426b82875900000000000000000000000012b306fa98f4cbb8d4457fdff3a0a0a56f07ccdf000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000014998f32ac7870000000000000000000000000000000000000000000000000000002cdc7205629c8000000000000000000000000000000000000000000000000000000000000051a97200000000000000000000000000000000000000000000000000000000e2e1c455000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001ac4286100191f000000000000000000000000000000000000000000000000000003c3079789758c000000000000000000000000000000000000000000000000000000000000051ad7500000000000000000000000000000000000000000000000000000000bb202c4a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000aa87bee538000000000000000000000000000000000000000000000000000000aa87bee5380000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000001b00000000000000000000000000000000000000000000000000000000000000021875e91005fcee86c5d391f4e787629275f148716bcf1ffc8d1d7b4260f7366c15352ae855a5bc624cd6a0280d8229bb66ced837813fef32f83aa724351ded1500000000000000000000000000000000000000000000000000000000000000027749fb5921ee80fd8738f483366c172fe450d81cef5c4359e2a955c708551cf666f16cb90ee867e5dff8d3ab47be578e9699b150c6e9e553e55564462628035826a0192f05194f04c82f8da26a1fdb462b3cba1e4bf605c720cfbb19b4244125e6b3a05c3ae8d489d63920026ffba9b5627e84d6c17663ad5e4f066612e17a63166199";
+console.log(abiDecoder);
+const decodedData = abiDecoder.decodeMethod(testData);
+console.log("decodedData", decodedData);
+*/
+const testABI = [{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"withdrawFees","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"feeAccount","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"feeAccount_","type":"address"}],"name":"changeFeeAccount","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"serviceFee","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"admin_","type":"address"}],"name":"changeAdmin","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"ZRX_TOKEN_ADDR","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"token","type":"address"},{"name":"tokensTotal","type":"uint256"},{"name":"ethersTotal","type":"uint256"},{"name":"exchanges","type":"uint8[]"},{"name":"orderAddresses","type":"address[5][]"},{"name":"orderValues","type":"uint256[6][]"},{"name":"exchangeFees","type":"uint256[]"},{"name":"v","type":"uint8[]"},{"name":"r","type":"bytes32[]"},{"name":"s","type":"bytes32[]"}],"name":"createSellOrder","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"collectedFee","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"withdrawZRX","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"token","type":"address"},{"name":"tokensTotal","type":"uint256"},{"name":"exchanges","type":"uint8[]"},{"name":"orderAddresses","type":"address[5][]"},{"name":"orderValues","type":"uint256[6][]"},{"name":"exchangeFees","type":"uint256[]"},{"name":"v","type":"uint8[]"},{"name":"r","type":"bytes32[]"},{"name":"s","type":"bytes32[]"}],"name":"createBuyOrder","outputs":[],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[],"name":"admin","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"serviceFee_","type":"uint256"}],"name":"changeFeePercentage","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"VERSION","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"inputs":[{"name":"admin_","type":"address"},{"name":"feeAccount_","type":"address"},{"name":"serviceFee_","type":"uint256"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"payable":true,"stateMutability":"payable","type":"fallback"},{"anonymous":false,"inputs":[{"indexed":false,"name":"account","type":"address"},{"indexed":false,"name":"token","type":"address"},{"indexed":false,"name":"tokens","type":"uint256"},{"indexed":false,"name":"ethers","type":"uint256"},{"indexed":false,"name":"tokensSold","type":"uint256"},{"indexed":false,"name":"ethersObtained","type":"uint256"},{"indexed":false,"name":"tokensRefunded","type":"uint256"}],"name":"FillSellOrder","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"name":"account","type":"address"},{"indexed":false,"name":"token","type":"address"},{"indexed":false,"name":"tokens","type":"uint256"},{"indexed":false,"name":"ethers","type":"uint256"},{"indexed":false,"name":"tokensObtained","type":"uint256"},{"indexed":false,"name":"ethersSpent","type":"uint256"},{"indexed":false,"name":"ethersRefunded","type":"uint256"}],"name":"FillBuyOrder","type":"event"}];
+abiDecoder.addABI(testABI);
+const testData = "0xf9068a0e843b9aca008308c0b3949ae4ed3bf7a3a529afbc126b4541c0d636d455f680b90624caf717430000000000000000000000007b22938ca841aa392c93dbb7f4c42178e3d65e880000000000000000000000000000000000000000000000000000000000009c4000000000000000000000000000000000000000000000000000330f8af60a0a00000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001a0000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000004a00000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000056000000000000000000000000000000000000000000000000000000000000005c000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000007c0480106375e25b12aa10e412d365b4c064b6b800000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b22938ca841aa392c93dbb7f4c42178e3d65e88000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007c0480106375e25b12aa10e412d365b4c064b6b800000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b22938ca841aa392c93dbb7f4c42178e3d65e880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000506cafb21a5800000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000003be89ba5000000000000000000000000000000000000000000000000000000002a626b85000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000506cafb21a5800000000000000000000000000000000000000000000000000000000000000f4240000000000000000000000000000000000000000000000000000000003be89ba500000000000000000000000000000000000000000000000000000000934f6a6d000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000aa87bee538000000000000000000000000000000000000000000000000000000aa87bee5380000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000000287cf2af9823cc10f24fbe21ec8eee1a5510468484619c152176d0fb9acf336d2c37e3550d3b231e6648f2bec16e3cf686c6428263c2b54a9fa988fc99d069a5200000000000000000000000000000000000000000000000000000000000000026b1aa3e007af9b332d3648fe59dae0bebb5b0e667c055ca96544b0bb1f4dcca678dfbd145c1b850766a2ad12aae062b9064136ad0f538e290e4a6281a3e5ae3f26a053d7153f9de35c6c86af43e2f944d40712527f1a6c493d94d05a09f757f7c234a07538b964c9e6bb4dd2ccefcd3dd0ef867617e6153da028118d9711c9051b6651";
+const decodedData = abiDecoder.decodeMethod(testData);
+var decodedTx = txDecoder.decodeTx(testData);
+console.log("decodedData", decodedData);
+console.log("decodedTx", decodedTx);
+var fnDecoder = new txDecoder.FunctionDecoder(testABI);
+console.log(fnDecoder.decodeFn(decodedTx.data));
 
 var web3 = require('web3');
 var coinType = '';
@@ -322,6 +427,13 @@ async function getOrders(makerToken) {
     final_orders[key] = final_order
   }
   console.log("final_orders", final_orders);
+  const prepareOrd = prepareOrderParams2(1, orders_obj.map(o => {
+    o.exchange = 1;
+    return o;
+  }))
+  console.log("XXXXX", prepareOrd);
+  console.log(JSON.stringify(prepareOrd));
+
   window.orders = final_orders;
   return final_orders; //sorted by best to worst price
 }
