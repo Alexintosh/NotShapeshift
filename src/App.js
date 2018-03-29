@@ -155,7 +155,7 @@ class App extends Component {
               ))}
             </GridList>
           </div>
-          
+
           <TextField hintText="Amount in Ether" type="text" id="amount" onChange={this.handleAmountChange.bind(this)} />
           <RaisedButton label="Buy"  onClick={this.handleSubmission.bind(this)}/>
           <p>Selected Token: <span id="selbut"> </span></p>
@@ -204,9 +204,11 @@ class App extends Component {
             console.log("WINDOW.ACCOUNT", window.account);
             console.log("NotShapeshift~ ", NotShapeshift);
             // console.log("ACCOUNT:", window.account);
+            console.log("NotShapeshift.deployed()", NotShapeshift.deployed());
             return NotShapeshift.deployed(); //NotShapeshift is truffle contract
         })
         .then(function(_deployed) {
+          console.log("HEEERE");
           deployed = _deployed;
           console.log("deployed contract", deployed) //methods logged in chrome console
           return deployed.getBalance.call(); //deployed is our NotShapeshift.deployed() truffle instance
@@ -291,6 +293,7 @@ async function getOrders(makerToken) {
   console.log("Taker Address, ",taker_Address);
   console.log("Maker Address, ",maker_Address);
   var final_orders = [];
+  console.log("orders_obj", orders_obj);
   for (var key in orders_obj) {
     //console.log("Maker :", orders_obj[key].makerTokenAddress, "Taker: ", orders_obj[key].takerTokenAddress);
     if(orders_obj[key].makerTokenAddress === maker_Address
@@ -318,7 +321,7 @@ async function getOrders(makerToken) {
     }
     final_orders[key] = final_order
   }
-  console.log(final_orders);
+  console.log("final_orders", final_orders);
   window.orders = final_orders;
   return final_orders; //sorted by best to worst price
 }
